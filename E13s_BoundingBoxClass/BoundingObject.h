@@ -13,6 +13,8 @@ class BoundingObject
 	vector3 m_v3Min = vector3(0.0f);		//Will store the minimum vector of the box Class
 	vector3 m_v3Max = vector3(0.0f);		//Will store the maximum vector of the box Class
 
+	std::vector<vector3> m_vecNormals;
+
 	vector3 m_v3CenterG = vector3(0.0f);	//Will store the center point of the box Class
 	vector3 m_v3MinG = vector3(0.0f);		//Will store the minimum vector of the box Class
 	vector3 m_v3MaxG = vector3(0.0f);		//Will store the maximum vector of the box Class

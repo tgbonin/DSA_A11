@@ -172,6 +172,12 @@ void BoundingObject::SetModelMatrix(matrix4 a_m4ToWorld)
 	m_v3HalfWidthG.z = glm::distance(vector3(0.0f, 0.0f, m_v3MinG.z), vector3(0.0f, 0.0f, m_v3MaxG.z)) / 2.0f;
 
 	m_fRadius = glm::distance(m_v3CenterG, m_v3CenterG + m_v3HalfWidthG);
+
+	//calculate normals
+	m_vecNormals.push_back(glm::cross((v3Corner[3] - v3Corner[7]), (v3Corner[5] - v3Corner[7])));
+	m_vecNormals.push_back(glm::cross((v3Corner[2] - v3Corner[6]), (v3Corner[7] - v3Corner[6])));
+	m_vecNormals.push_back(glm::cross((v3Corner[7] - v3Corner[6]), (v3Corner[4] - v3Corner[6])));
+	
 }
 
 
@@ -222,6 +228,137 @@ bool BoundingObject::IsColliding(BoundingObject* const a_pOther)
 			bColliding = false;
 	}
 	else { bColliding = false; }
+
+	if (bColliding == true)
+	{
+		
+		//SAT Collision Detection
+		vector3 distance = a_pOther->m_v3CenterG - m_v3CenterG;
+
+		
+		for (int i = 0; i < 3; i++){
+			//Ax Ay Az
+			if (glm::dot(distance, m_vecNormals[i]) >
+				m_v3HalfWidth[i] +
+				a_pOther->m_v3HalfWidth.x * glm::dot(m_vecNormals[i], a_pOther->m_vecNormals[0]) +
+				a_pOther->m_v3HalfWidth.y * glm::dot(m_vecNormals[i], a_pOther->m_vecNormals[1]) +
+				a_pOther->m_v3HalfWidth.z * glm::dot(m_vecNormals[i], a_pOther->m_vecNormals[2])
+				)
+			{
+				bColliding = false;
+			}
+
+			//Bx By Bz
+			if (glm::dot(distance, a_pOther->m_vecNormals[i]) >
+				m_v3HalfWidth.x * glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[i]) +
+				m_v3HalfWidth.y * glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[i]) +
+				m_v3HalfWidth.z * glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[i]) +
+				a_pOther->m_v3HalfWidth[i]
+				)
+			{
+				bColliding = false;
+			}
+
+		}
+
+		//Ax x Bx
+		if ((glm::dot(distance, m_vecNormals[2]) * glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[0])) -
+			(glm::dot(distance, m_vecNormals[1]) * glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[0])) >
+			 glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[0]) * m_v3HalfWidth[1] +
+			 glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[0]) * m_v3HalfWidth[2] +
+			 glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[2]) * a_pOther->m_v3HalfWidth[1] +
+			 glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[1]) * a_pOther->m_v3HalfWidth[2])
+		{ bColliding = false; }
+
+		//Ax x By
+		if ((glm::dot(distance, m_vecNormals[2]) * glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[1])) -
+			(glm::dot(distance, m_vecNormals[1]) * glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[1])) >
+			glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[1]) * m_v3HalfWidth[1] +
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[1]) * m_v3HalfWidth[2] +
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[1]) * a_pOther->m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[2]) * a_pOther->m_v3HalfWidth[2])
+		{
+			bColliding = false;
+		}
+
+		//Ax x Bz
+		if ((glm::dot(distance, m_vecNormals[2]) * glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[2])) -
+			(glm::dot(distance, m_vecNormals[1]) * glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[2])) >
+			glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[2]) * m_v3HalfWidth[1] +
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[2]) * m_v3HalfWidth[2] +
+			glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[1]) * a_pOther->m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[0]) * a_pOther->m_v3HalfWidth[2])
+		{
+			bColliding = false;
+		}
+
+		//Ay x Bx
+		if ((glm::dot(distance, m_vecNormals[0]) * glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[0])) -
+			(glm::dot(distance, m_vecNormals[2]) * glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[0])) >
+			glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[0]) * m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[0]) * m_v3HalfWidth[2] +
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[2]) * a_pOther->m_v3HalfWidth[1] +
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[1]) * a_pOther->m_v3HalfWidth[2])
+		{
+			bColliding = false;
+		}
+
+		//Ay x By
+		if ((glm::dot(distance, m_vecNormals[0]) * glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[1])) -
+			(glm::dot(distance, m_vecNormals[2]) * glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[1])) >
+			glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[1]) * m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[1]) * m_v3HalfWidth[2] +
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[2]) * a_pOther->m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[0]) * a_pOther->m_v3HalfWidth[2])
+		{
+			bColliding = false;
+		}
+
+		//Ay x Bz
+		if ((glm::dot(distance, m_vecNormals[0]) * glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[2])) -
+			(glm::dot(distance, m_vecNormals[2]) * glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[2])) >
+			glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[2]) * m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[2]) * m_v3HalfWidth[2] +
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[1]) * a_pOther->m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[0]) * a_pOther->m_v3HalfWidth[1])
+		{
+			bColliding = false;
+		}
+
+		//Az x Bx
+		if ((glm::dot(distance, m_vecNormals[1]) * glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[0])) -
+			(glm::dot(distance, m_vecNormals[0]) * glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[0])) >
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[0]) * m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[0]) * m_v3HalfWidth[1] +
+			glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[2]) * a_pOther->m_v3HalfWidth[1] +
+			glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[1]) * a_pOther->m_v3HalfWidth[2])
+		{
+			bColliding = false;
+		}
+
+		//Az x By
+		if ((glm::dot(distance, m_vecNormals[1]) * glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[1])) -
+			(glm::dot(distance, m_vecNormals[0]) * glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[1])) >
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[1]) * m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[1]) * m_v3HalfWidth[1] +
+			glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[2]) * a_pOther->m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[0]) * a_pOther->m_v3HalfWidth[2])
+		{
+			bColliding = false;
+		}
+
+		//Az x Bz
+		if ((glm::dot(distance, m_vecNormals[1]) * glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[2])) -
+			(glm::dot(distance, m_vecNormals[0]) * glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[2])) >
+			glm::dot(m_vecNormals[1], a_pOther->m_vecNormals[2]) * m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[0], a_pOther->m_vecNormals[2]) * m_v3HalfWidth[2] +
+			glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[1]) * a_pOther->m_v3HalfWidth[0] +
+			glm::dot(m_vecNormals[2], a_pOther->m_vecNormals[0]) * a_pOther->m_v3HalfWidth[2])
+		{
+			bColliding = false;
+		}
+
+	}
 
 	return bColliding;
 }
